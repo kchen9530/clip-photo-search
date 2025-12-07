@@ -1,198 +1,221 @@
-# AI 照片搜索
+# AI Photo Search
 
-一个使用 AI 技术通过自然语言查询搜索本地照片库的 Web 应用程序。系统使用 CLIP（对比语言-图像预训练）模型来理解图像和文本，实现跨照片的语义搜索。
+A web application that uses AI technology to search local photo libraries through natural language queries. The system uses CLIP (Contrastive Language-Image Pre-training) model to understand images and text, enabling semantic search across photos.
 
-## 功能特性
+## Features
 
-- 🔍 自然语言搜索查询（例如："海滩上的日落"、"玩耍的狗狗"）
-- 🖼️ 带悬停效果的图片画廊
-- ⚡ 使用 CLIP 嵌入实现快速语义搜索
-- 📊 索引统计和重新索引功能
-- 🎨 现代化、响应式 UI
+- 🔍 Natural language search queries (e.g., "sunset at the beach", "dogs playing")
+- 🖼️ Image gallery with hover effects
+- ⚡ Fast semantic search using CLIP embeddings
+- 📊 Index statistics and reindexing functionality
+- 🎨 Modern, responsive UI
+- ⌨️ Enter key support for quick searches
 
-## 为什么选择 CLIP 模型？
+## Why CLIP Model?
 
-CLIP (Contrastive Language-Image Pre-training) 是 OpenAI 开发的多模态 AI 模型，特别适合照片搜索应用，原因如下：
+CLIP (Contrastive Language-Image Pre-training) is a multimodal AI model developed by OpenAI, particularly suitable for photo search applications:
 
-1. **多模态理解**：CLIP 在同一个向量空间中同时理解图像和文本，使得文本查询能够直接匹配图像内容，无需额外的文本标注。
+1. **Multimodal Understanding**: CLIP understands both images and text in the same vector space, enabling direct text-to-image matching without additional text annotations.
 
-2. **语义理解**：不同于传统的基于标签或文件名的搜索，CLIP 能够理解图像的实际内容和场景，例如搜索"女人躺在海滩上"时，即使图片没有这些标签，也能找到相关照片。
+2. **Semantic Understanding**: Unlike traditional tag or filename-based search, CLIP understands the actual content and scenes in images.
 
-3. **零样本学习**：CLIP 不需要针对特定数据集进行微调，可以直接理解各种自然语言描述，支持灵活的搜索查询。
+3. **Zero-shot Learning**: CLIP doesn't require fine-tuning for specific datasets and can directly understand various natural language descriptions.
 
-4. **高效性**：ViT-B/32 版本在保持良好性能的同时，模型大小适中（~150MB），推理速度快，适合本地部署。
+4. **Efficiency**: ViT-B/32 version maintains good performance with moderate model size (~150MB) and fast inference speed.
 
-5. **开源且成熟**：CLIP 是开源模型，有活跃的社区支持，文档完善，易于集成。
+5. **Open Source**: CLIP is open source with active community support and comprehensive documentation.
 
-6. **隐私保护**：所有处理都在本地完成，照片数据不会上传到云端，保护用户隐私。
+6. **Privacy Protection**: All processing is done locally, protecting user privacy.
 
-## 架构
+## Architecture
 
-- **后端**：使用 CLIP 模型进行图像-文本匹配的 FastAPI
-- **前端**：使用 Vite 进行快速开发的 React
-- **AI 模型**：OpenAI CLIP (ViT-B/32) 用于语义理解
+- **Backend**: FastAPI with CLIP model for image-text matching
+- **Frontend**: Streamlit (recommended) or React
+- **AI Model**: OpenAI CLIP (ViT-B/32) for semantic understanding
 
-## 安装设置
+## Installation
 
-### 前置要求
+### Prerequisites
 
 - Python 3.8+
-- Node.js 16+
-- 本地照片库目录
+- Node.js 16+ (only if using React frontend)
+- Local photo library directory
 
-### 后端设置
+### Backend Setup
 
-1. 进入后端目录：
+1. Navigate to backend directory:
 ```bash
 cd backend
 ```
 
-2. 创建虚拟环境（推荐）：
+2. Create virtual environment (recommended):
 ```bash
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 ```
 
-3. 安装依赖：
+3. Install dependencies:
 ```bash
 pip install -r requirements.txt
 ```
 
-4. 设置照片库路径（可选，默认为 ~/Pictures）：
+4. Set photo library path (optional, defaults to `test_photos/`):
 ```bash
 export PHOTO_LIBRARY_PATH="/path/to/your/photos"
 ```
 
-5. 启动后端服务器：
+5. Start backend server:
 ```bash
 python main.py
 ```
 
-后端将：
-- 加载 CLIP 模型（首次运行可能需要一分钟）
-- 自动索引照片库中的所有图片
-- 在 http://localhost:8000 启动 API 服务器
+The backend will:
+- Load CLIP model (may take a minute on first run)
+- Automatically index all images in the photo library
+- Start API server at http://localhost:8000
 
-### 前端设置
+### Frontend Setup
 
-#### 方式一：Streamlit（推荐）
+#### Option 1: Streamlit (Recommended)
 
-Streamlit 提供了更现代、更易用的界面，支持点击查看大图、阈值过滤等功能。
+Streamlit provides a modern, user-friendly interface with features like click-to-view full-size images and threshold filtering.
 
-1. 安装 Streamlit（如果尚未安装）：
+1. Install Streamlit (if not already installed):
 ```bash
 pip install streamlit
 ```
 
-2. 启动 Streamlit 前端：
+2. Start Streamlit frontend:
 ```bash
 streamlit run frontend_streamlit.py
 ```
 
-或者使用提供的脚本：
-```bash
-./run_streamlit.sh
-```
+Frontend will be available at http://localhost:8501
 
-前端将在 http://localhost:8501 可用
+#### Option 2: React Frontend
 
-#### 方式二：React 前端（传统方式）
-
-1. 进入前端目录：
+1. Navigate to frontend directory:
 ```bash
 cd frontend
 ```
 
-2. 安装依赖：
+2. Install dependencies:
 ```bash
 npm install
 ```
 
-3. 启动开发服务器：
+3. Start development server:
 ```bash
 npm run dev
 ```
 
-前端将在 http://localhost:3000 可用
+Frontend will be available at http://localhost:3000
 
-## 使用方法
+## Usage
 
-### Streamlit 前端（推荐）
+### Streamlit Frontend (Recommended)
 
-1. 启动后端服务器（在 `backend/` 目录）：
+1. Start backend server (in `backend/` directory):
 ```bash
 python main.py
 ```
 
-2. 启动 Streamlit 前端（在项目根目录）：
+2. Start Streamlit frontend (in project root):
 ```bash
 streamlit run frontend_streamlit.py
 ```
 
-3. 在浏览器中打开 http://localhost:8501
+3. Open http://localhost:8501 in your browser
 
-4. **功能特性**：
-   - 🔍 自然语言搜索
-   - 🖼️ 点击图片查看大图
-   - 📊 相似度分数显示
-   - ⚙️ 阈值过滤：只显示相似度高于阈值的图片
-   - 📈 可调节返回结果数量（1-50）
-   - 🎯 组合策略：同时使用 Top N 和阈值过滤
+4. **Features**:
+   - 🔍 Natural language search
+   - 🖼️ Click images to view full size
+   - 📊 Similarity score display
+   - ⚙️ Threshold filtering: show only images above similarity threshold
+   - 📈 Adjustable result count (1-50)
+   - ⌨️ Press Enter to search
 
-5. **搜索参数设置**：
-   - **返回结果数量**：控制最多返回多少张图片
-   - **启用阈值过滤**：开启后只显示相似度分数高于阈值的图片
-   - **相似度阈值**：设置最低相似度分数（0.0-1.0）
+5. **Search Parameters**:
+   - **Result Count**: Control maximum number of images returned
+   - **Enable Threshold Filter**: Show only images with similarity scores above threshold
+   - **Similarity Threshold**: Set minimum similarity score (0.0-1.0)
 
-### React 前端（传统方式）
+### Example Queries
 
-1. 同时启动后端和前端服务器
-2. 等待初始索引完成（在 UI 中查看统计信息）
-3. 输入自然语言搜索查询
-4. 在画廊中浏览匹配的图片
+- "sunset on the mountain"
+- "smiling people"
+- "food on the table"
+- "cats and dogs"
+- "beach vacation"
+- "wedding ceremony"
+- "snow scene"
+- "woman lying on the beach"
+- "man singing"
+- "playing cats"
 
-### 示例查询
+## Downloading Test Images
 
-- "山上的日落"
-- "微笑的人们"
-- "桌上的食物"
-- "猫和狗"
-- "海滩度假"
-- "婚礼仪式"
-- "雪景"
-- "女人躺在海滩上"
-- "男人在唱歌"
-- "玩耍的猫咪"
+### Download Flickr30k Dataset
 
-## API 端点
+The project includes a script to download images from the Flickr30k dataset for testing:
 
-- `GET /` - API 状态
-- `GET /health` - 健康检查
-- `GET /stats` - 获取索引统计信息
-- `POST /search` - 搜索图片
+```bash
+python download_flickr30k.py
+```
+
+**Options**:
+- Default: Downloads up to 10,000 images
+- Custom limit: `python download_flickr30k.py --max-images 5000`
+- Minimum: `python download_flickr30k.py --max-images 200`
+
+**Download Methods** (tried in order):
+1. **Hugging Face** (Fast Streaming) - No credentials needed
+2. **Kaggle API** - Requires Kaggle credentials (see below)
+
+**Kaggle Setup** (if Hugging Face fails):
+1. Install Kaggle CLI: `pip install kaggle`
+2. Get API token from https://www.kaggle.com/account
+3. Place `kaggle.json` in `~/.kaggle/`
+4. Set permissions: `chmod 600 ~/.kaggle/kaggle.json`
+
+**Output**:
+- Images are downloaded to `test_photos/` directory
+- Old images in `test_photos/` are automatically cleared
+- Script shows download progress
+
+**Note**: The script will extract only the specified number of images from the dataset to save time and disk space.
+
+## API Endpoints
+
+- `GET /` - API status
+- `GET /health` - Health check
+- `GET /stats` - Get indexing statistics
+- `POST /search` - Search images
   ```json
   {
-    "query": "你的搜索查询",
-    "limit": 20
+    "query": "your search query",
+    "limit": 20,
+    "threshold": 0.2,
+    "use_threshold": false
   }
   ```
-- `POST /reindex` - 强制重新索引所有图片
-- `GET /image` - 通过后端 API 提供图片服务（解决浏览器 file:// 协议限制）
+- `POST /reindex` - Force reindex all images
+- `GET /image` - Serve image files through backend API
 
-## 配置
+## Configuration
 
-### 照片库路径
+### Photo Library Path
 
-默认情况下，系统在 `~/Pictures` 中查找照片。你可以通过以下方式更改：
+By default, the system looks for photos in `test_photos/` directory. You can change this:
 
-1. 设置环境变量：
+1. Set environment variable:
 ```bash
 export PHOTO_LIBRARY_PATH="/path/to/your/photos"
 ```
 
-2. 或修改 `backend/main.py` 中的 `PHOTO_LIBRARY_PATH` 变量
+2. Or modify `PHOTO_LIBRARY_PATH` variable in `backend/main.py`
 
-### 支持的图片格式
+### Supported Image Formats
 
 - JPEG (.jpg, .jpeg)
 - PNG (.png)
@@ -201,109 +224,95 @@ export PHOTO_LIBRARY_PATH="/path/to/your/photos"
 - WebP (.webp)
 - TIFF (.tiff, .tif)
 
-## 性能说明
+## Performance
 
-- 首次运行将下载 CLIP 模型（约 150MB）
-- 初始索引可能需要一些时间，具体取决于图片数量
-- 嵌入向量缓存在 `image_embeddings.npy` 和 `image_paths.json` 中
-- 只有在添加新照片时才需要重新索引
+- First run will download CLIP model (~150MB)
+- Initial indexing may take some time depending on number of images
+- Embeddings are cached in `image_embeddings.npy` and `image_paths.json`
+- Reindexing is only needed when adding new photos
 
-## 索引文件说明
+## Index Files
 
-系统在索引图片时会生成两个缓存文件，用于加速搜索：
+The system generates two cache files when indexing images:
 
 ### `image_embeddings.npy`
-- **类型**：NumPy 数组文件（二进制格式）
-- **内容**：所有图片的 CLIP 嵌入向量
-- **格式**：形状为 `(图片数量, 512)` 的二维数组
-  - 每张图片对应一个 512 维的向量
-  - 这个向量是图片的语义表示，由 CLIP 模型生成
-- **用途**：存储图片的语义特征，用于快速计算相似度
+- **Type**: NumPy array file (binary format)
+- **Content**: CLIP embedding vectors for all images
+- **Format**: 2D array with shape `(number_of_images, 512)`
+- **Purpose**: Store semantic features for fast similarity computation
 
 ### `image_paths.json`
-- **类型**：JSON 文本文件
-- **内容**：所有图片的完整路径列表
-- **格式**：字符串数组，每个元素是一个图片的绝对路径
-- **用途**：将向量索引映射回实际图片路径
+- **Type**: JSON text file
+- **Content**: List of full paths to all images
+- **Format**: Array of strings, each element is an absolute path
+- **Purpose**: Map vector indices back to actual image paths
 
-### 工作原理
+### How It Works
 
-这两个文件是配对的，通过数组索引位置建立对应关系：
+These files are paired, with array index positions establishing correspondence:
 
 ```
-索引时：
-图片 → CLIP模型 → 嵌入向量(512维) → 保存到 image_embeddings.npy[索引]
-路径 → 保存到 image_paths.json[索引]
+Indexing:
+Image → CLIP Model → Embedding Vector (512-dim) → Save to image_embeddings.npy[index]
+Path → Save to image_paths.json[index]
 
-搜索时：
-查询文本 → CLIP模型 → 查询向量(512维)
-查询向量 vs 所有图片向量 → 计算相似度 → 找到最匹配的索引
-索引 → 从 image_paths.json[索引] 获取路径 → 返回结果
+Searching:
+Query Text → CLIP Model → Query Vector (512-dim)
+Query Vector vs All Image Vectors → Compute Similarity → Find Best Matching Indices
+Indices → Get Paths from image_paths.json[index] → Return Results
 ```
 
-### 为什么需要这两个文件？
+### File Location
 
-1. **性能优化**：避免每次搜索都重新计算所有图片的嵌入向量，大幅提升搜索速度
-2. **持久化存储**：索引一次，后续直接使用，无需重复处理
-3. **配对关系**：通过数组索引位置将向量与路径一一对应，确保搜索结果准确
+These files are saved in the `backend/` directory by default and are excluded from version control via `.gitignore`.
 
-### 文件位置
+## Troubleshooting
 
-这些文件默认保存在 `backend/` 目录下，可以通过 `.gitignore` 排除，避免提交到版本控制。
+### Images Not Loading
 
-## 故障排除
+If images fail to load:
+1. Check browser console for errors
+2. Verify backend server is running
+3. Check image paths are correct
 
-### 前端图片无法加载
+### Model Loading Issues
 
-前端通过后端 API (`/image` 端点) 提供图片服务，避免了浏览器的 `file://` 协议限制。如果图片无法加载：
+If CLIP model fails to load:
+- Ensure sufficient disk space (model ~338MB)
+- Check network connection (for first-time download)
+- Verify PyTorch installation
 
-1. 检查浏览器控制台是否有错误
-2. 确认后端服务器正在运行
-3. 检查图片路径是否正确
+**CLIP Model Cache Location**:
+- Default: `~/.cache/clip/`
+- Model file: `~/.cache/clip/ViT-B-32.pt` (~338MB)
+- Only downloaded once on first use
 
-### 模型加载问题
+### Indexing Fails
 
-如果 CLIP 模型加载失败：
-- 确保有足够的磁盘空间（模型约 338MB）
-- 检查网络连接（首次下载）
-- 验证 PyTorch 安装
+- Verify photo library path exists
+- Check file permissions
+- Ensure images are in supported formats
 
-#### CLIP 模型下载路径
+### Proxy Issues
 
-CLIP 模型在首次使用时会自动下载，存储位置如下：
+If encountering SOCKS proxy errors:
+- Temporarily disable proxy: `unset ALL_PROXY && pip install ...`
+- Or use mirror: `pip install -i https://pypi.tuna.tsinghua.edu.cn/simple ...`
 
-- **默认路径**：`~/.cache/clip/`
-- **模型文件**：`~/.cache/clip/ViT-B-32.pt`（约 338MB）
-- **完整路径示例**：`/Users/username/.cache/clip/ViT-B-32.pt`
+## Project Structure
 
-**说明**：
-- 模型只会在首次使用时下载一次
-- 下载后会自动缓存，后续启动无需重新下载
-- 可以通过设置环境变量 `CLIP_CACHE_DIR` 自定义缓存目录
-- 如果下载失败，可以手动下载模型文件到缓存目录
-
-### 索引失败
-
-- 验证照片库路径是否存在
-- 检查文件权限
-- 确保图片是支持的格式
-
-### 代理设置问题
-
-如果遇到 SOCKS 代理相关错误：
-- 在安装依赖时临时取消代理：`unset ALL_PROXY && pip install ...`
-- 或使用国内镜像源：`pip install -i https://pypi.tuna.tsinghua.edu.cn/simple ...`
-
-## 测试图片
-
-项目包含一个 `download_test_images.py` 脚本，可以下载测试图片用于测试搜索功能：
-
-```bash
-python3 download_test_images.py
+```
+cursor-photo-search/
+├── backend/              # FastAPI backend
+│   ├── main.py          # Main API server
+│   ├── requirements.txt # Python dependencies
+│   └── venv/            # Virtual environment
+├── frontend_streamlit.py # Streamlit frontend
+├── download_flickr30k.py # Script to download test images
+├── test_photos/          # Test images directory (gitignored)
+└── README.md            # This file
 ```
 
-脚本会下载包含人物、动物、场景等的多样化测试图片到 `test_photos/` 目录。
-
-## 许可证
+## License
 
 MIT
