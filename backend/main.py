@@ -30,7 +30,10 @@ clip_preprocess = None
 device = None
 
 # Configuration
-PHOTO_LIBRARY_PATH = os.getenv("PHOTO_LIBRARY_PATH", os.path.expanduser("~/Pictures"))
+# Default to test_photos directory for Flickr30k dataset
+# Can be overridden with PHOTO_LIBRARY_PATH environment variable
+DEFAULT_PHOTO_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "test_photos")
+PHOTO_LIBRARY_PATH = os.getenv("PHOTO_LIBRARY_PATH", DEFAULT_PHOTO_PATH)
 INDEX_FILE = "image_index.json"
 EMBEDDINGS_FILE = "image_embeddings.npy"
 IMAGE_PATHS_FILE = "image_paths.json"
@@ -86,14 +89,43 @@ def compute_image_embedding(image_path: str) -> Optional[np.ndarray]:
         print(f"Error processing {image_path}: {e}")
         return None
 
-def index_images(force_reindex: bool = False):
+def index_images(force_reindex: bool = False, check_new_images: bool = False):
     """Index all images in the photo library"""
     print(f"Indexing images from: {PHOTO_LIBRARY_PATH}")
     
+    # If force reindex, clear old index files first
+    if force_reindex:
+        print("Force reindex: Clearing old index files...")
+        if os.path.exists(INDEX_FILE):
+            os.remove(INDEX_FILE)
+        if os.path.exists(EMBEDDINGS_FILE):
+            os.remove(EMBEDDINGS_FILE)
+        if os.path.exists(IMAGE_PATHS_FILE):
+            os.remove(IMAGE_PATHS_FILE)
+    
     # Check if index exists and is valid
     if not force_reindex and os.path.exists(INDEX_FILE) and os.path.exists(EMBEDDINGS_FILE):
-        print("Using existing index")
-        return
+        if check_new_images:
+            # Check if there are new images
+            current_images = set(get_image_files(PHOTO_LIBRARY_PATH))
+            with open(IMAGE_PATHS_FILE, 'r') as f:
+                indexed_paths = set(json.load(f))
+            
+            # Verify indexed paths still exist
+            valid_indexed_paths = {p for p in indexed_paths if os.path.exists(p)}
+            removed_images = indexed_paths - valid_indexed_paths
+            new_images = current_images - indexed_paths
+            
+            if new_images or removed_images:
+                print(f"Detected changes: {len(new_images)} new images, {len(removed_images)} removed")
+                print("Reindexing to update index...")
+                force_reindex = True
+            else:
+                print("Using existing index (no changes detected)")
+                return
+        else:
+            print("Using existing index")
+            return
     
     # Get all image files
     image_files = get_image_files(PHOTO_LIBRARY_PATH)
@@ -103,11 +135,16 @@ def index_images(force_reindex: bool = False):
         print("No images found!")
         return
     
-    # Compute embeddings
+    # Compute embeddings - only for files that actually exist
     embeddings = []
     valid_paths = []
     
     for i, img_path in enumerate(image_files):
+        # Verify file exists before processing
+        if not os.path.exists(img_path):
+            print(f"⚠️  Skipping non-existent file: {img_path}")
+            continue
+            
         if i % 10 == 0:
             print(f"Processing {i+1}/{len(image_files)}...")
         
@@ -143,7 +180,10 @@ def index_images(force_reindex: bool = False):
 async def startup_event():
     """Initialize models and index on startup"""
     initialize_models()
-    index_images()
+    # Force reindex on startup to pick up new Flickr30k photos
+    # This ensures we always use the latest photos and ignore old ones
+    print("Starting up: Reindexing photos to ensure latest dataset is indexed...")
+    index_images(force_reindex=True)
 
 @app.get("/")
 async def root():
@@ -167,6 +207,29 @@ async def search_images(request: SearchRequest):
     with open(IMAGE_PATHS_FILE, 'r') as f:
         image_paths = json.load(f)
     
+    # Verify that embeddings and paths match
+    if len(embeddings) != len(image_paths):
+        raise HTTPException(status_code=500, detail="Index mismatch: embeddings and paths count don't match. Please reindex.")
+    
+    # Filter out non-existent files and their corresponding embeddings
+    valid_indices = []
+    valid_embeddings = []
+    valid_paths = []
+    
+    for idx, img_path in enumerate(image_paths):
+        if os.path.exists(img_path):
+            valid_indices.append(idx)
+            valid_embeddings.append(embeddings[idx])
+            valid_paths.append(img_path)
+    
+    if len(valid_embeddings) == 0:
+        raise HTTPException(status_code=404, detail="No valid images found in index. Please reindex.")
+    
+    if len(valid_embeddings) < len(embeddings):
+        print(f"⚠️  Warning: {len(embeddings) - len(valid_embeddings)} indexed images no longer exist. Consider reindexing.")
+        # Update embeddings array
+        valid_embeddings = np.array(valid_embeddings)
+    
     # Encode query text
     with torch.no_grad():
         text_tokens = clip.tokenize([request.query]).to(device)
@@ -175,7 +238,7 @@ async def search_images(request: SearchRequest):
         query_embedding = text_features.cpu().numpy().flatten()
     
     # Compute similarity scores
-    similarities = np.dot(embeddings, query_embedding)
+    similarities = np.dot(valid_embeddings, query_embedding)
     
     # Get top results
     top_indices = np.argsort(similarities)[::-1][:request.limit]
@@ -189,7 +252,7 @@ async def search_images(request: SearchRequest):
         top_indices = filtered_indices
     
     results = [
-        SearchResult(path=image_paths[idx], score=float(similarities[idx]))
+        SearchResult(path=valid_paths[idx], score=float(similarities[idx]))
         for idx in top_indices
     ]
     

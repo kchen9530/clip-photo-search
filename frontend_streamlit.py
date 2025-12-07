@@ -234,25 +234,27 @@ with st.sidebar:
             except Exception as e:
                 st.error(f"重新索引错误: {e}")
 
-# Main content area
-col1, col2 = st.columns([3, 1])
-
-with col1:
-    search_query = st.text_input(
-        "搜索查询",
-        placeholder="例如：'女人躺在海滩上'、'猫在玩耍'、'火车票'",
-        label_visibility="collapsed"
-    )
-
-with col2:
-    search_button = st.button("🔍 搜索", use_container_width=True)
-
-# Search and display results
-if search_button and search_query:
-    with st.spinner("正在搜索..."):
-        results = search_images(search_query, limit, threshold, use_threshold)
-        st.session_state.search_results = results
-        st.session_state.selected_image = None  # Clear selected image on new search
+# Main content area - Use form to enable Enter key submission
+with st.form("search_form", clear_on_submit=False):
+    col1, col2 = st.columns([3, 1])
+    
+    with col1:
+        search_query = st.text_input(
+            "搜索查询",
+            placeholder="例如：'女人躺在海滩上'、'猫在玩耍'、'火车票'",
+            label_visibility="collapsed",
+            key="search_input"
+        )
+    
+    with col2:
+        search_button = st.form_submit_button("🔍 搜索", use_container_width=True)
+    
+    # Search and display results (triggered by button click or Enter key)
+    if search_button and search_query:
+        with st.spinner("正在搜索..."):
+            results = search_images(search_query, limit, threshold, use_threshold)
+            st.session_state.search_results = results
+            st.session_state.selected_image = None  # Clear selected image on new search
 
 # Display results in a clean list format
 if st.session_state.search_results:
