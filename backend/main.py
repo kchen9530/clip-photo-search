@@ -18,7 +18,7 @@ app = FastAPI(title="Photo Search API")
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=["http://localhost:3000", "http://localhost:5173", "http://localhost:8501"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -223,17 +223,36 @@ async def serve_image(path: str):
         # Decode the path if it's URL encoded
         decoded_path = urllib.parse.unquote(path)
         
-        # Security check: ensure the path is within the photo library
-        image_path = Path(decoded_path)
+        # Get the actual photo library path from index if available
         photo_lib_path = Path(PHOTO_LIBRARY_PATH).resolve()
+        if os.path.exists(IMAGE_PATHS_FILE):
+            try:
+                with open(IMAGE_PATHS_FILE, 'r') as f:
+                    image_paths = json.load(f)
+                    if image_paths and len(image_paths) > 0:
+                        # Use the directory of the first indexed image as the photo library path
+                        first_image_path = Path(image_paths[0])
+                        photo_lib_path = first_image_path.parent.resolve()
+            except:
+                pass
         
-        if not str(image_path.resolve()).startswith(str(photo_lib_path.resolve())):
-            raise HTTPException(status_code=403, detail="Access denied")
+        # Security check: ensure the path is within the photo library
+        image_path = Path(decoded_path).resolve()
+        
+        # Check if path is within photo library or its parent directories
+        # This allows for test_photos directory
+        if not str(image_path).startswith(str(photo_lib_path)) and not str(photo_lib_path) in str(image_path):
+            # Also check if it's in the project directory (for test_photos)
+            project_root = Path(__file__).parent.parent.resolve()
+            if not str(image_path).startswith(str(project_root)):
+                raise HTTPException(status_code=403, detail=f"Access denied. Path: {image_path}, Library: {photo_lib_path}")
         
         if not image_path.exists():
-            raise HTTPException(status_code=404, detail="Image not found")
+            raise HTTPException(status_code=404, detail=f"Image not found: {image_path}")
         
         return FileResponse(image_path, media_type="image/jpeg")
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

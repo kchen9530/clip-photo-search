@@ -52,6 +52,27 @@ st.markdown("""
         font-size: 0.9rem;
         font-weight: bold;
     }
+    /* Make image clickable */
+    div[data-testid="stImage"] {
+        cursor: pointer;
+        position: relative;
+    }
+    /* Hide button text and make it overlay the image */
+    button[data-testid="baseButton-secondary"]:empty,
+    button[data-testid="baseButton-secondary"]:has-text("") {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: transparent;
+        border: none;
+        cursor: pointer;
+        z-index: 1;
+        opacity: 0;
+        padding: 0;
+        margin: 0;
+    }
     .stButton>button {
         width: 100%;
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -233,89 +254,120 @@ if search_button and search_query:
         st.session_state.search_results = results
         st.session_state.selected_image = None  # Clear selected image on new search
 
-# Display results
+# Display results in a clean list format
 if st.session_state.search_results:
     st.divider()
     st.subheader(f"📸 找到 {len(st.session_state.search_results)} 张相关图片")
     
-    # Create columns for image grid
-    num_cols = 4
-    cols = st.columns(num_cols)
-    
+    # Display results as a list
     for idx, result in enumerate(st.session_state.search_results):
-        col_idx = idx % num_cols
-        with cols[col_idx]:
-            # Image card
-            image_url = get_image_url(result['path'])
-            score = result['score']
-            score_percent = score * 100
+        image_url = get_image_url(result['path'])
+        score = result['score']
+        score_percent = score * 100
+        file_name = Path(result['path']).name
+        
+        # Create a container for each result item
+        with st.container():
+            # Use columns for layout: thumbnail on left, info on right
+            col_img, col_info = st.columns([2, 3])
             
-            # Display image with clickable functionality
-            try:
-                img_response = requests.get(
-                    image_url, 
-                    timeout=15,
-                    proxies={'http': None, 'https': None}  # Disable proxy for local connections
-                )
-                if img_response.status_code == 200:
-                    img = Image.open(io.BytesIO(img_response.content))
-                    
-                    # Create a clickable image
-                    st.image(img, use_container_width=True, caption=f"相似度: {score_percent:.1f}%")
-                    
-                    # Button to view full size
-                    if st.button(f"🔍 查看大图", key=f"view_{idx}", use_container_width=True):
-                        st.session_state.selected_image = {
-                            'path': result['path'],
-                            'score': score,
-                            'url': image_url
-                        }
-                else:
-                    st.error(f"无法加载图片 (状态码: {img_response.status_code})")
-            except requests.exceptions.RequestException as e:
-                st.error(f"图片加载失败: {str(e)[:100]}")
-            except Exception as e:
-                st.error(f"图片处理错误: {str(e)[:100]}")
+            with col_img:
+                # Display thumbnail image
+                try:
+                    img_response = requests.get(
+                        image_url, 
+                        timeout=15,
+                        proxies={'http': None, 'https': None}
+                    )
+                    if img_response.status_code == 200:
+                        img = Image.open(io.BytesIO(img_response.content))
+                        
+                        # Display thumbnail - click to view full size
+                        st.image(img, use_container_width=True)
+                        
+                        # Clickable button overlay
+                        if st.button("🔍 查看大图", key=f"view_{idx}", use_container_width=True):
+                            st.session_state.selected_image = {
+                                'path': result['path'],
+                                'score': score,
+                                'url': image_url
+                            }
+                            st.rerun()
+                    else:
+                        st.error(f"图片加载失败 (状态码: {img_response.status_code})")
+                        st.text(f"URL: {image_url}")
+                        st.text(f"路径: {result['path']}")
+                except requests.exceptions.RequestException as e:
+                    st.error(f"图片加载失败: {str(e)[:100]}")
+                    st.text(f"URL: {image_url}")
+                except Exception as e:
+                    st.error(f"图片错误: {str(e)[:100]}")
+                    st.text(f"路径: {result['path']}")
             
-            # File name
-            file_name = Path(result['path']).name
-            st.caption(f"📄 {file_name}")
+            with col_info:
+                # File information
+                st.markdown(f"### {file_name}")
+                
+                # Similarity score with progress bar
+                st.markdown(f"**相似度**: {score_percent:.1f}%")
+                st.progress(score, text="")
+                
+                # File path (collapsible)
+                with st.expander("📁 查看完整路径"):
+                    st.code(result['path'], language=None)
+                
+                # Additional info
+                st.caption(f"结果 #{idx + 1} / {len(st.session_state.search_results)}")
             
-            # Score badge
-            st.markdown(f'<div class="score-badge">相似度: {score_percent:.1f}%</div>', unsafe_allow_html=True)
+            # Divider between items
+            if idx < len(st.session_state.search_results) - 1:
+                st.divider()
 
-# Full size image modal
+# Full size image modal - display at top of page
 if st.session_state.selected_image:
+    selected = st.session_state.selected_image
+    
     st.divider()
     st.subheader("🖼️ 大图预览")
     
-    selected = st.session_state.selected_image
-    col1, col2, col3 = st.columns([1, 2, 1])
-    
-    with col2:
-        try:
-            img_response = requests.get(
-                selected['url'], 
-                timeout=15,
-                proxies={'http': None, 'https': None}  # Disable proxy for local connections
-            )
-            if img_response.status_code == 200:
-                img = Image.open(io.BytesIO(img_response.content))
+    try:
+        img_response = requests.get(
+            selected['url'], 
+            timeout=15,
+            proxies={'http': None, 'https': None}  # Disable proxy for local connections
+        )
+        if img_response.status_code == 200:
+            img = Image.open(io.BytesIO(img_response.content))
+            
+            # Display image in large size
+            col1, col2, col3 = st.columns([1, 6, 1])
+            with col2:
                 st.image(img, use_container_width=True)
                 
                 # Image info
                 st.info(f"**路径**: {selected['path']}  \n**相似度**: {selected['score']*100:.2f}%")
                 
                 # Close button
-                if st.button("❌ 关闭", use_container_width=True):
+                if st.button("❌ 关闭大图", key="close_fullscreen", use_container_width=True):
                     st.session_state.selected_image = None
                     st.rerun()
-            else:
-                st.error(f"无法加载大图 (状态码: {img_response.status_code})")
-        except requests.exceptions.RequestException as e:
-            st.error(f"大图加载失败: {str(e)[:100]}")
-        except Exception as e:
-            st.error(f"大图处理错误: {str(e)[:100]}")
+        else:
+            st.error(f"无法加载大图 (状态码: {img_response.status_code})")
+            if st.button("❌ 关闭", key="close_error", use_container_width=True):
+                st.session_state.selected_image = None
+                st.rerun()
+    except requests.exceptions.RequestException as e:
+        st.error(f"大图加载失败: {str(e)[:100]}")
+        if st.button("❌ 关闭", key="close_request_error", use_container_width=True):
+            st.session_state.selected_image = None
+            st.rerun()
+    except Exception as e:
+        st.error(f"大图处理错误: {str(e)[:100]}")
+        if st.button("❌ 关闭", key="close_exception", use_container_width=True):
+            st.session_state.selected_image = None
+            st.rerun()
+    
+    st.divider()
 
 # Example queries
 if not st.session_state.search_results:
@@ -339,18 +391,12 @@ if not st.session_state.search_results:
     for idx, query in enumerate(example_queries):
         with cols[idx % 5]:
             if st.button(query, key=f"example_{idx}", use_container_width=True):
-                # Trigger search with example query
-                st.session_state.example_query = query
-                st.rerun()
-    
-    # Handle example query search
-    if 'example_query' in st.session_state:
-        query = st.session_state.example_query
-        del st.session_state.example_query
-        with st.spinner("正在搜索..."):
-            results = search_images(query, limit, threshold, use_threshold)
-            st.session_state.search_results = results
-            st.session_state.selected_image = None
+                # Directly trigger search with example query
+                with st.spinner("正在搜索..."):
+                    results = search_images(query, limit, threshold, use_threshold)
+                    st.session_state.search_results = results
+                    st.session_state.selected_image = None
+                    st.rerun()
 
 # Footer
 st.divider()
