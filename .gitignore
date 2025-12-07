@@ -34,6 +34,10 @@ backend/image_embeddings.npy
 backend/image_paths.json
 *.log
 
+# Test photos directory
+test_photos/
+test_photos/**
+
 # OS
 .DS_Store
 Thumbs.db
