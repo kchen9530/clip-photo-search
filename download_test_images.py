@@ -134,6 +134,18 @@ test_images = [
     # Cats and dogs together
     {"url": "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=800&q=80", "filename": "cat_dog_together.jpg", "description": "Cat and dog together"},
     {"url": "https://images.unsplash.com/photo-1601758228041-f3b2795255f1?w=800&q=80", "filename": "pets_playing.jpg", "description": "Pets playing together"},
+    
+    # ID cards, bank cards, and tickets with text information
+    {"url": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80", "filename": "id_card_sample.jpg", "description": "ID card with personal information"},
+    {"url": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80", "filename": "credit_card_sample.jpg", "description": "Credit card with card details"},
+    {"url": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80", "filename": "bank_card_sample.jpg", "description": "Bank card with account information"},
+    {"url": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80", "filename": "train_ticket_sample.jpg", "description": "Train ticket with travel details"},
+    {"url": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80", "filename": "boarding_pass.jpg", "description": "Boarding pass with flight information"},
+    {"url": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80", "filename": "driver_license.jpg", "description": "Driver license with personal details"},
+    {"url": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80", "filename": "passport_sample.jpg", "description": "Passport with identification information"},
+    {"url": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80", "filename": "event_ticket.jpg", "description": "Event ticket with details"},
+    {"url": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80", "filename": "receipt_sample.jpg", "description": "Receipt with transaction details"},
+    {"url": "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=800&q=80", "filename": "invoice_sample.jpg", "description": "Invoice with billing information"},
 ]
 
 def download_image(url, filepath, description, current, total):
