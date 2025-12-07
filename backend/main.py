@@ -38,6 +38,8 @@ IMAGE_PATHS_FILE = "image_paths.json"
 class SearchRequest(BaseModel):
     query: str
     limit: int = 20
+    threshold: float = 0.0  # Minimum similarity score threshold
+    use_threshold: bool = False  # Whether to use threshold filtering
 
 class SearchResult(BaseModel):
     path: str
@@ -177,6 +179,14 @@ async def search_images(request: SearchRequest):
     
     # Get top results
     top_indices = np.argsort(similarities)[::-1][:request.limit]
+    
+    # Filter by threshold if enabled
+    if request.use_threshold:
+        filtered_indices = [idx for idx in top_indices if similarities[idx] >= request.threshold]
+        if len(filtered_indices) == 0:
+            # If no results meet threshold, return top result anyway
+            filtered_indices = top_indices[:1] if len(top_indices) > 0 else []
+        top_indices = filtered_indices
     
     results = [
         SearchResult(path=image_paths[idx], score=float(similarities[idx]))

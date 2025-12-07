@@ -75,6 +75,29 @@ python main.py
 
 ### 前端设置
 
+#### 方式一：Streamlit（推荐）
+
+Streamlit 提供了更现代、更易用的界面，支持点击查看大图、阈值过滤等功能。
+
+1. 安装 Streamlit（如果尚未安装）：
+```bash
+pip install streamlit
+```
+
+2. 启动 Streamlit 前端：
+```bash
+streamlit run frontend_streamlit.py
+```
+
+或者使用提供的脚本：
+```bash
+./run_streamlit.sh
+```
+
+前端将在 http://localhost:8501 可用
+
+#### 方式二：React 前端（传统方式）
+
 1. 进入前端目录：
 ```bash
 cd frontend
@@ -93,6 +116,35 @@ npm run dev
 前端将在 http://localhost:3000 可用
 
 ## 使用方法
+
+### Streamlit 前端（推荐）
+
+1. 启动后端服务器（在 `backend/` 目录）：
+```bash
+python main.py
+```
+
+2. 启动 Streamlit 前端（在项目根目录）：
+```bash
+streamlit run frontend_streamlit.py
+```
+
+3. 在浏览器中打开 http://localhost:8501
+
+4. **功能特性**：
+   - 🔍 自然语言搜索
+   - 🖼️ 点击图片查看大图
+   - 📊 相似度分数显示
+   - ⚙️ 阈值过滤：只显示相似度高于阈值的图片
+   - 📈 可调节返回结果数量（1-50）
+   - 🎯 组合策略：同时使用 Top N 和阈值过滤
+
+5. **搜索参数设置**：
+   - **返回结果数量**：控制最多返回多少张图片
+   - **启用阈值过滤**：开启后只显示相似度分数高于阈值的图片
+   - **相似度阈值**：设置最低相似度分数（0.0-1.0）
+
+### React 前端（传统方式）
 
 1. 同时启动后端和前端服务器
 2. 等待初始索引完成（在 UI 中查看统计信息）

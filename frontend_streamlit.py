@@ -1,0 +1,361 @@
+import streamlit as st
+import requests
+import os
+from pathlib import Path
+from PIL import Image
+import io
+
+# Disable proxy for requests to avoid SOCKS connection issues
+os.environ.pop('ALL_PROXY', None)
+os.environ.pop('HTTP_PROXY', None)
+os.environ.pop('HTTPS_PROXY', None)
+
+# Page configuration
+st.set_page_config(
+    page_title="AI 照片搜索",
+    page_icon="🔍",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# API configuration
+API_BASE = os.getenv("API_BASE", "http://localhost:8000")
+
+# Custom CSS for better styling
+st.markdown("""
+<style>
+    .main-header {
+        font-size: 3rem;
+        font-weight: bold;
+        text-align: center;
+        background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 1rem;
+    }
+    .image-card {
+        border-radius: 10px;
+        padding: 10px;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        transition: transform 0.2s;
+    }
+    .image-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+    .score-badge {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.9rem;
+        font-weight: bold;
+    }
+    .stButton>button {
+        width: 100%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 600;
+    }
+    .stButton>button:hover {
+        background: linear-gradient(135deg, #5568d3 0%, #653a91 100%);
+    }
+</style>
+""", unsafe_allow_html=True)
+
+# Initialize session state
+if 'selected_image' not in st.session_state:
+    st.session_state.selected_image = None
+if 'search_results' not in st.session_state:
+    st.session_state.search_results = []
+
+def get_stats():
+    """Get indexing statistics from backend"""
+    try:
+        # Disable proxy for local connections
+        response = requests.get(
+            f"{API_BASE}/stats", 
+            timeout=10,
+            proxies={'http': None, 'https': None}
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
+    except requests.exceptions.ConnectionError:
+        return None
+    except requests.exceptions.Timeout:
+        return None
+    except Exception as e:
+        return None
+
+def search_images(query, limit, threshold, use_threshold):
+    """Search for images"""
+    try:
+        payload = {
+            "query": query,
+            "limit": limit,
+            "threshold": threshold,
+            "use_threshold": use_threshold
+        }
+        response = requests.post(
+            f"{API_BASE}/search",
+            json=payload,
+            timeout=60,
+            headers={"Content-Type": "application/json"},
+            proxies={'http': None, 'https': None}  # Disable proxy for local connections
+        )
+        if response.status_code == 200:
+            return response.json()
+        else:
+            st.error(f"搜索失败 (状态码: {response.status_code}): {response.text[:200]}")
+            return []
+    except requests.exceptions.ConnectionError:
+        st.error("❌ 无法连接到后端服务器。请确保后端正在运行 (http://localhost:8000)")
+        return []
+    except requests.exceptions.Timeout:
+        st.error("⏱️ 请求超时。请稍后重试。")
+        return []
+    except requests.exceptions.RequestException as e:
+        st.error(f"❌ 网络错误: {str(e)[:200]}")
+        return []
+    except Exception as e:
+        st.error(f"❌ 搜索错误: {str(e)[:200]}")
+        return []
+
+def get_image_url(image_path):
+    """Get image URL from backend"""
+    encoded_path = requests.utils.quote(image_path, safe='')
+    return f"{API_BASE}/image?path={encoded_path}"
+
+# Header
+st.markdown('<h1 class="main-header">🔍 AI 照片搜索</h1>', unsafe_allow_html=True)
+st.markdown('<p style="text-align: center; color: #666; font-size: 1.1rem;">使用自然语言搜索你的照片库</p>', unsafe_allow_html=True)
+
+# Sidebar for settings
+with st.sidebar:
+    st.header("⚙️ 设置")
+    
+    # Backend connection status
+    st.subheader("🔌 连接状态")
+    try:
+        health_response = requests.get(
+            f"{API_BASE}/health", 
+            timeout=5,
+            proxies={'http': None, 'https': None}  # Disable proxy for local connections
+        )
+        if health_response.status_code == 200:
+            st.success("✅ 后端已连接")
+        else:
+            st.error(f"❌ 后端响应异常 (状态码: {health_response.status_code})")
+            st.info("请检查后端服务器状态")
+    except requests.exceptions.ConnectionError:
+        st.error("❌ 后端未连接")
+        st.info("请确保后端正在运行：\n```bash\ncd backend\npython main.py\n```")
+    except requests.exceptions.Timeout:
+        st.warning("⏱️ 连接超时，请稍后重试")
+    except Exception as e:
+        st.error(f"❌ 连接错误: {str(e)[:50]}")
+        st.info("请检查后端服务器是否正常运行")
+    
+    st.divider()
+    
+    # Stats
+    st.subheader("📊 索引统计")
+    stats = get_stats()
+    if stats:
+        if stats.get("indexed"):
+            st.success(f"✅ 已索引: {stats.get('total_images', 0)} 张图片")
+            st.info(f"📁 路径: {stats.get('photo_library_path', 'N/A')}")
+        else:
+            st.warning("⚠️ 尚未索引图片")
+    else:
+        st.warning("⚠️ 无法获取索引统计")
+    
+    st.divider()
+    
+    # Search parameters
+    st.subheader("🔍 搜索参数")
+    limit = st.slider("返回结果数量", min_value=1, max_value=50, value=10, step=1)
+    
+    use_threshold = st.checkbox("启用阈值过滤", value=False, help="只显示相似度分数高于阈值的图片")
+    
+    threshold = st.slider(
+        "相似度阈值",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.2,
+        step=0.05,
+        disabled=not use_threshold,
+        help="相似度分数低于此值的图片将被过滤"
+    )
+    
+    st.divider()
+    
+    # Reindex button
+    if st.button("🔄 重新索引", use_container_width=True):
+        with st.spinner("正在重新索引..."):
+            try:
+                response = requests.post(
+                    f"{API_BASE}/reindex", 
+                    timeout=300,
+                    proxies={'http': None, 'https': None}  # Disable proxy for local connections
+                )
+                if response.status_code == 200:
+                    st.success("重新索引完成！")
+                    st.rerun()
+                else:
+                    st.error("重新索引失败")
+            except Exception as e:
+                st.error(f"重新索引错误: {e}")
+
+# Main content area
+col1, col2 = st.columns([3, 1])
+
+with col1:
+    search_query = st.text_input(
+        "搜索查询",
+        placeholder="例如：'女人躺在海滩上'、'猫在玩耍'、'火车票'",
+        label_visibility="collapsed"
+    )
+
+with col2:
+    search_button = st.button("🔍 搜索", use_container_width=True)
+
+# Search and display results
+if search_button and search_query:
+    with st.spinner("正在搜索..."):
+        results = search_images(search_query, limit, threshold, use_threshold)
+        st.session_state.search_results = results
+        st.session_state.selected_image = None  # Clear selected image on new search
+
+# Display results
+if st.session_state.search_results:
+    st.divider()
+    st.subheader(f"📸 找到 {len(st.session_state.search_results)} 张相关图片")
+    
+    # Create columns for image grid
+    num_cols = 4
+    cols = st.columns(num_cols)
+    
+    for idx, result in enumerate(st.session_state.search_results):
+        col_idx = idx % num_cols
+        with cols[col_idx]:
+            # Image card
+            image_url = get_image_url(result['path'])
+            score = result['score']
+            score_percent = score * 100
+            
+            # Display image with clickable functionality
+            try:
+                img_response = requests.get(
+                    image_url, 
+                    timeout=15,
+                    proxies={'http': None, 'https': None}  # Disable proxy for local connections
+                )
+                if img_response.status_code == 200:
+                    img = Image.open(io.BytesIO(img_response.content))
+                    
+                    # Create a clickable image
+                    st.image(img, use_container_width=True, caption=f"相似度: {score_percent:.1f}%")
+                    
+                    # Button to view full size
+                    if st.button(f"🔍 查看大图", key=f"view_{idx}", use_container_width=True):
+                        st.session_state.selected_image = {
+                            'path': result['path'],
+                            'score': score,
+                            'url': image_url
+                        }
+                else:
+                    st.error(f"无法加载图片 (状态码: {img_response.status_code})")
+            except requests.exceptions.RequestException as e:
+                st.error(f"图片加载失败: {str(e)[:100]}")
+            except Exception as e:
+                st.error(f"图片处理错误: {str(e)[:100]}")
+            
+            # File name
+            file_name = Path(result['path']).name
+            st.caption(f"📄 {file_name}")
+            
+            # Score badge
+            st.markdown(f'<div class="score-badge">相似度: {score_percent:.1f}%</div>', unsafe_allow_html=True)
+
+# Full size image modal
+if st.session_state.selected_image:
+    st.divider()
+    st.subheader("🖼️ 大图预览")
+    
+    selected = st.session_state.selected_image
+    col1, col2, col3 = st.columns([1, 2, 1])
+    
+    with col2:
+        try:
+            img_response = requests.get(
+                selected['url'], 
+                timeout=15,
+                proxies={'http': None, 'https': None}  # Disable proxy for local connections
+            )
+            if img_response.status_code == 200:
+                img = Image.open(io.BytesIO(img_response.content))
+                st.image(img, use_container_width=True)
+                
+                # Image info
+                st.info(f"**路径**: {selected['path']}  \n**相似度**: {selected['score']*100:.2f}%")
+                
+                # Close button
+                if st.button("❌ 关闭", use_container_width=True):
+                    st.session_state.selected_image = None
+                    st.rerun()
+            else:
+                st.error(f"无法加载大图 (状态码: {img_response.status_code})")
+        except requests.exceptions.RequestException as e:
+            st.error(f"大图加载失败: {str(e)[:100]}")
+        except Exception as e:
+            st.error(f"大图处理错误: {str(e)[:100]}")
+
+# Example queries
+if not st.session_state.search_results:
+    st.divider()
+    st.subheader("💡 示例查询")
+    
+    example_queries = [
+        "女人躺在海滩上",
+        "男人在唱歌",
+        "猫在玩耍",
+        "狗在海滩",
+        "火车票",
+        "身份证",
+        "信用卡",
+        "海滩日落",
+        "人们在餐厅",
+        "办公室会议"
+    ]
+    
+    cols = st.columns(5)
+    for idx, query in enumerate(example_queries):
+        with cols[idx % 5]:
+            if st.button(query, key=f"example_{idx}", use_container_width=True):
+                # Trigger search with example query
+                st.session_state.example_query = query
+                st.rerun()
+    
+    # Handle example query search
+    if 'example_query' in st.session_state:
+        query = st.session_state.example_query
+        del st.session_state.example_query
+        with st.spinner("正在搜索..."):
+            results = search_images(query, limit, threshold, use_threshold)
+            st.session_state.search_results = results
+            st.session_state.selected_image = None
+
+# Footer
+st.divider()
+st.markdown(
+    '<p style="text-align: center; color: #999; font-size: 0.9rem;">Powered by CLIP & FastAPI • 本地隐私保护</p>',
+    unsafe_allow_html=True
+)
+
