@@ -38,6 +38,14 @@ backend/image_paths.json
 test_photos/
 test_photos/**
 
+# Flickr30k images directory
+flickr30k_images/
+flickr30k_images/**
+
+# Temp Flickr30k directory
+temp_flickr30k/
+temp_flickr30k/**
+
 # OS
 .DS_Store
 Thumbs.db
