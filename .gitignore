@@ -42,9 +42,17 @@ test_photos/**
 flickr30k_images/
 flickr30k_images/**
 
-# Temp Flickr30k directory
+# Temp directories (download scripts temporary files)
 temp_flickr30k/
 temp_flickr30k/**
+temp_coco/
+temp_coco/**
+old_test_photos/
+old_test_photos/**
+
+# Download scripts (temporary/utility scripts)
+download_coco_dataset.py
+download_flickr30k.py
 
 # OS
 .DS_Store
