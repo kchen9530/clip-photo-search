@@ -52,7 +52,7 @@ old_test_photos/**
 
 # Download scripts (temporary/utility scripts)
 download_coco_dataset.py
-download_flickr30k.py
+# Note: download_flickr30k.py is kept in version control as it's a useful tool
 
 # OS
 .DS_Store
